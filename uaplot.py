@@ -55,8 +55,8 @@ def main():
     
     start = time.time()
     home = Path.home()
-    station_file = home / 'Dropbox/wxcentre/scripts/uaStations.xlsx' #Can the string of this location. Full path is not required.
-    save_dir = home / 'Dropbox/wxcentre/maps/uamaps/octoberstorm_paper' #Change the string to choose where to save the file. 
+    station_file = home / 'UAMaps/' #Can the string of this location. Full path is not required.
+    save_dir = home / 'UAMaps/maps/' #Change the string to choose where to save the file. 
     td_option = True
 
 
