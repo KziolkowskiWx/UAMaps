@@ -12,7 +12,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from metpy.plots import simple_layout, StationPlot, StationPlotLayout
 from metpy.calc import equivalent_potential_temperature as te
 from metpy.calc import relative_humidity_from_specific_humidity as calc_rh
-from metpy.calc import dewpoint_rh as calc_td
+from metpy.calc import dewpoint_from_relative_humidity as calc_td
 from metpy.units import units
 import metpy.calc as mpcalc
 import numpy as np
@@ -34,7 +34,7 @@ def main():
     parser.add_option("--h", "--help", dest="help", help="--am or --pm for 12z or 00z obs")
     parser.add_option("--am", "--am", dest="am", action="store_true", help="Get 12z obs")
     parser.add_option("--pm", "--pm", dest="pm",  action="store_true", help="Get 00z obs")
-    parser.add_option("--date", dest="date",type="str",help="date in format YYYYMDD")
+    parser.add_option("--date", dest="date",type="str",help="date in format YYYYMMDD")
     parser.add_option("--td", dest='td', action="store_true", help="Plot dewpoint instead of dewpoint depression")
     (opt, arg) = parser.parse_args()
 
@@ -43,7 +43,7 @@ def main():
     if opt.am:
         hour = 12
     if opt.pm:
-        hour = 0
+        hour = 00
     if opt.td:
         td_option = True #change default to dewpoint
     # dt = datetime(year,month,day,hour)
@@ -60,7 +60,7 @@ def main():
     td_option = True
 
 
-    dt = datetime(int(input_date[0:4]), int(input_date[4:6]), int(input_date[6:]), hour)
+    dt = datetime.strptime(input_date + str(hour), '%Y%m%d%H%M')
     base_url = 'https://www.ncei.noaa.gov/thredds/dodsC/model-gfs-g4-anl-files-old/'
     xx = '{}{dt:%Y%m}/{dt:%Y%m%d}/gfsanl_4_{dt:%Y%m%d}_''{dt:%H}00_000.grb2'.format(base_url, dt=dt)
     ds = xr.open_dataset(xx).metpy.parse_cf()
