@@ -55,15 +55,21 @@ def main():
     
     start = time.time()
     home = Path.home()
-    station_file = home / 'UAMaps/' #Can the string of this location. Full path is not required.
+    station_file = home / 'UAMaps/ua_station_list.csv' #Can the string of this location. Full path is not required.
     save_dir = home / 'UAMaps/maps/' #Change the string to choose where to save the file. 
     td_option = True
 
 
+
+    #For Historical Model Analysis 
+    #base_url = 'https://www.ncei.noaa.gov/thredds/dodsC/model-gfs-g4-anl-files/'
+    # xx = '{}{dt:%Y%m}/{dt:%Y%m%d}/gfs_4_{dt:%Y%m%d}_''{dt:%H}00_000.grb2'.format(base_url, dt=dt)
+    # ds = xr.open_dataset(xx).metpy.parse_cf()
+
+
     dt = datetime.strptime(input_date + str(hour), '%Y%m%d%H%M')
-    base_url = 'https://www.ncei.noaa.gov/thredds/dodsC/model-gfs-g4-anl-files-old/'
-    xx = '{}{dt:%Y%m}/{dt:%Y%m%d}/gfsanl_4_{dt:%Y%m%d}_''{dt:%H}00_000.grb2'.format(base_url, dt=dt)
-    ds = xr.open_dataset(xx).metpy.parse_cf()
+    date = dt - timedelta(hours=6) #Go back 6 hours to for 18z Objective Analysis.
+    ds = xr.open_dataset('https://thredds.ucar.edu/thredds/dodsC/grib/NCEP/GFS/Global_0p5deg_ana/GFS_Global_0p5deg_ana_{0:%Y%m%d}_{0:%H}00.grib2'.format(date)).metpy.parse_cf()
 
     # levels = [250, 300, 500, 700, 850, 925]
     levels = [500]
@@ -92,7 +98,7 @@ def getData(station_file, date, hh):
     """
     
     print ('Getting station data...')
-    station_data = pd.read_excel(station_file)
+    station_data = pd.read_csv(station_file)
     stations, lats, lons = station_data['station_id'].values, station_data['lat'].values, station_data['lon'].values
     stations = list(stations)    
     # date = datetime.utcnow()
@@ -310,7 +316,7 @@ def uaPlot(data, level, date, save_dir, ds, td_option):
                                central_latitude=90., globe=globe,
                                true_scale_latitude=60)
     # Plot the image
-    fig = plt.figure(figsize=(10, 10))
+    fig = plt.figure(figsize=(30, 30))
     ax = fig.add_subplot(1, 1, 1, projection=proj)
     state_boundaries = feat.NaturalEarthFeature(category='cultural',
                                             name='admin_1_states_provinces_lines',
@@ -338,7 +344,7 @@ def uaPlot(data, level, date, save_dir, ds, td_option):
     lats = ds.lat.sel(lat=slice(85, 15)).values
     hght = ds.Geopotential_height_isobaric.metpy.sel(vertical=level * 100,  lat=slice(85, 15), lon=slice(360-200, 360-10))*units.hPa
     smooth_hght = mpcalc.smooth_n_point(hght, 9, 10).squeeze()
-    cs = ax.contour(lons, lats, smooth_hght.m, range(0, 20000, cint), colors='black', transform=ccrs.PlateCarree())
+    cs = ax.contour(lons, lats, smooth_hght.values, range(0, 20000, cint), colors='black', transform=ccrs.PlateCarree())
     clabels = plt.clabel(cs, fmt='%d', colors='white', inline_spacing=5, use_clabeltext=True, fontsize=14)
 
     # Contour labels with black boxes and white text
@@ -402,13 +408,13 @@ def uaPlot(data, level, date, save_dir, ds, td_option):
         
     
     dpi = plt.rcParams['savefig.dpi'] = 255    
-    text = AnchoredText(str(level) + 'mb Wind, Heights, '+ temps +' Valid: {0:%Y-%m-%d} {0:%H}:00UTC'.format(date), loc=3, frameon=True, prop=dict(fontsize=30))
+    text = AnchoredText(str(level) + 'mb Wind, Heights, '+ temps +' Valid: {0:%Y-%m-%d} {0:%H}:00 UTC'.format(date), loc=3, frameon=True, prop=dict(fontsize=30))
     ax.add_artist(text)
     plt.tight_layout()
-    # save_fname = '{0:%Y%m%d_%H}z_'.format(date) + str(level) +'mb.pdf'
-    # plt.savefig(save_dir / save_fname, dpi = dpi, bbox_inches='tight')
-    # print('saving {}'.format(level))
-    plt.show()
+    save_fname = '{0:%Y%m%d_%H}z_'.format(date) + str(level) +'mb.png'
+    plt.savefig(save_dir / save_fname, dpi = dpi, bbox_inches='tight')
+    print('saving {}'.format(level))
+    #plt.show()
 
 
 
