@@ -32,10 +32,11 @@ def main():
     parser = OptionParser(conflict_handler="resolve", usage=usage, version="%prog 1.0 By Kyle Ziolkowski")
     # parser = OptionParser(conflict_handler="resolve")
     parser.add_option("--h", "--help", dest="help", help="--am or --pm for 12z or 00z obs")
-    parser.add_option("--am", "--am", dest="am", action="store_true", help="Get 12z obs")
-    parser.add_option("--pm", "--pm", dest="pm",  action="store_true", help="Get 00z obs")
+    parser.add_option("--12z", "--am", dest="am", action="store_true", help="Get 12z obs")
+    parser.add_option("--00z", "--pm", dest="pm",  action="store_true", help="Get 00z obs")
     parser.add_option("--date", dest="date",type="str",help="date in format YYYYMMDD")
     parser.add_option("--td", dest='td', action="store_true", help="Plot dewpoint instead of dewpoint depression")
+    parser.add_option("--te", dest='te', action="store_true", help="Plot Theta-e instead of temperatures for 925/850/700 mb")
     (opt, arg) = parser.parse_args()
 
     if (opt.am == True and opt.pm == True) or (opt.am == None and opt.pm == None):
@@ -46,6 +47,8 @@ def main():
         hour = 00
     if opt.td:
         td_option = True #change default to dewpoint
+    if opt.te:
+        te_option = True
     # dt = datetime(year,month,day,hour)
     input_date = opt.date
     # year = 2019
@@ -76,13 +79,9 @@ def main():
     uadata, stations = getData(station_file, dt, hour)
     
     print('Working on maps.....')
- #   with mp.Pool(processes=2) as pool:
     for level in levels:
         data = generateData(uadata, stations, level)
-        uaPlot(data, level, dt, save_dir, ds, td_option)
- #           pool.apply_async(uaPlot, args=(generateData(uadata, stations, level), level, date, save_dir, ds, td_option,))
- #       pool.close()
- #       pool.join()
+        uaPlot(data, level, dt, save_dir, ds, td_option, te_option)
     end = time.time()
     total_time = round(end-start, 2)
     print('Process Complete..... Total time = {}s'.format(total_time))
@@ -233,7 +232,7 @@ def mapbackground():
     return ax
 
 
-def uaPlot(data, level, date, save_dir, ds, td_option):
+def uaPlot(data, level, date, save_dir, ds, td_option, te_option):
 
 
     custom_layout = StationPlotLayout()
@@ -248,9 +247,11 @@ def uaPlot(data, level, date, save_dir, ds, td_option):
         lats = ds.lat.sel(lat=slice(85, 15)).values
         lons = ds.lon.sel(lon=slice(360-200, 360-10)).values
         pres = ds['isobaric'].values[:] * units('Pa')
-        tmpk_var = ds.Temperature_isobaric.metpy.sel(lat=slice(85, 15), lon=slice(360-200, 360-10)).squeeze()
-        tmpk_smooth = mpcalc.smooth_n_point(tmpk_var, 9, 10)
-        thta = mpcalc.potential_temperature(pres[:, None, None], tmpk_smooth)
+        # tmpk_var = ds.Temperature_isobaric.metpy.sel(lat=slice(85, 15), lon=slice(360-200, 360-10)).squeeze()
+        # smooth_tmpc = (mpcalc.smooth_n_point(tmpk_var, 9, 10).to('degC')).squeeze()
+        tmpk = ds.Temperature_isobaric.metpy.sel(vertical=level*100, lat=slice(85, 15), lon=slice(360-200, 360-10))*units.degK
+        smooth_tmpc = (mpcalc.smooth_n_point(tmpk.data, 9, 10)).to('degC').squeeze()
+        # thta = mpcalc.potential_temperature(pres[:, None, None], tmpk_smooth)
         # uwnd_var = ds['u-component_of_wind_isobaric'].metpy.sel(lat=slice(85, 15), lon=slice(360-200, 360-10)).squeeze()
         # vwnd_var = ds['v-component_of_wind_isobaric'].metpy.sel(lat=slice(85, 15), lon=slice(360-200, 360-10)).squeeze()
         # uwnd = mpcalc.smooth_n_point(uwnd_var, 9, 2)
@@ -261,10 +262,7 @@ def uaPlot(data, level, date, save_dir, ds, td_option):
         # #                                    lats[None, :, None] * units('degrees'))
         # div = mpcalc.divergence(uwnd, vwnd, dx[None, :, :], dy[None, :, :], dim_order='yx')
         level_idx = list(pres.m).index(((level * units('hPa')).to(pres.units)).m)
-    # if level == 300:
-    #     custom_layout.add_value('NE', 'height', fmt=lambda v: format(v, '1')[1:4], units='m', color='black')
-    #     cint = 120
-    #     tint = 5
+
     if level == 500:
         custom_layout.add_value('NE', 'height', fmt=lambda v: format(v, '1')[0:3], units='m', color='black')
         cint = 60
@@ -387,24 +385,28 @@ def uaPlot(data, level, date, save_dir, ds, td_option):
 
     if level == 700 or level == 850 or level == 925:
         # Plot Dashed Contours of Temperature
-        # cs2 = ax.contour(lon, lat, smooth_tmpc.m, range(210, 360, tint), colors='orange', transform=ccrs.PlateCarree())
-        # clabels = plt.clabel(cs2, fmt='%d', colors='orange', inline_spacing=5, use_clabeltext=True, fontsize=22)
+        if te_option == True:
+            cs2 = ax.contour(lon, lat, smooth_tmpc.m, range(210, 360, tint), colors='orange', transform=ccrs.PlateCarree())
+            clabels = plt.clabel(cs2, fmt='%d', colors='orange', inline_spacing=5, use_clabeltext=True, fontsize=22)
+            for c in cs2.collections:
+                c.set_dashes([(0, (5.0, 3.0))])    
         # # Set longer dashes than default
         # for c in cs2.collections:
         #     c.set_dashes([(0, (5.0, 3.0))])\
-        tmpk = ds.Temperature_isobaric.metpy.sel(vertical=level*100, lat=slice(85, 15), lon=slice(360-200, 360-10))*units.degK
-        smooth_tmpc = (mpcalc.smooth_n_point(tmpk.data, 9, 10)).to('degC').squeeze()
-        cs2 = ax.contour(lons, lats, smooth_tmpc.m, range(1, 50, tint), colors='red', transform=ccrs.PlateCarree())
-        cs3 = ax.contour(lons, lats, smooth_tmpc.m, range(-50, -1, tint), colors='blue', transform=ccrs.PlateCarree())
-        zeroline = ax.contour(lons, lats, smooth_tmpc.m, 0, colors='red', linestyles='solid', linewidths=3, transform=ccrs.PlateCarree())
-        zeroline_label = plt.clabel(zeroline, fmt='%d', colors='black', inline_spacing=5, use_clabeltext=True, fontsize=30)
-        clabels2 = plt.clabel(cs2, fmt='%d', colors='black', inline_spacing=5, use_clabeltext=True, fontsize=30)
-        clabels3 = plt.clabel(cs3, fmt='%d', colors='black', inline_spacing=5, use_clabeltext=True, fontsize=30)
-        for c in cs2.collections:
-                c.set_dashes([(0, (5.0, 3.0))])    
-        for c in cs3.collections:
-                c.set_dashes([(0, (5.0, 3.0))])    
-          
+        else:
+            tmpk = ds.Temperature_isobaric.metpy.sel(vertical=level*100, lat=slice(85, 15), lon=slice(360-200, 360-10))*units.degK
+            smooth_tmpc = (mpcalc.smooth_n_point(tmpk.data, 9, 10)).to('degC').squeeze()
+            cs2 = ax.contour(lons, lats, smooth_tmpc.m, range(1, 50, tint), colors='red', transform=ccrs.PlateCarree())
+            cs3 = ax.contour(lons, lats, smooth_tmpc.m, range(-50, -1, tint), colors='blue', transform=ccrs.PlateCarree())
+            zeroline = ax.contour(lons, lats, smooth_tmpc.m, 0, colors='red', linestyles='solid', linewidths=3, transform=ccrs.PlateCarree())
+            zeroline_label = plt.clabel(zeroline, fmt='%d', colors='black', inline_spacing=5, use_clabeltext=True, fontsize=30)
+            clabels2 = plt.clabel(cs2, fmt='%d', colors='black', inline_spacing=5, use_clabeltext=True, fontsize=30)
+            clabels3 = plt.clabel(cs3, fmt='%d', colors='black', inline_spacing=5, use_clabeltext=True, fontsize=30)
+            for c in cs2.collections:
+                    c.set_dashes([(0, (5.0, 3.0))])    
+            for c in cs3.collections:
+                    c.set_dashes([(0, (5.0, 3.0))])    
+            
         
     
     dpi = plt.rcParams['savefig.dpi'] = 255    
