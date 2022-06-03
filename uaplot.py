@@ -67,12 +67,12 @@ def main():
     # ds = xr.open_dataset(xx).metpy.parse_cf()
 
 
-    dt = datetime.strptime(input_date + str(hour), '%Y%m%d%H%M')
+    dt = datetime.strptime(input_date + str(hour), '%Y%m%d%H')
     date = dt - timedelta(hours=6) #Go back 6 hours to for 18z Objective Analysis.
     ds = xr.open_dataset('https://thredds.ucar.edu/thredds/dodsC/grib/NCEP/GFS/Global_0p5deg_ana/GFS_Global_0p5deg_ana_{0:%Y%m%d}_{0:%H}00.grib2'.format(date)).metpy.parse_cf()
 
     # levels = [250, 300, 500, 700, 850, 925]
-    levels = [500]
+    levels = [250]
     uadata, stations = getData(station_file, dt, hour)
     
     print('Working on maps.....')
@@ -251,15 +251,15 @@ def uaPlot(data, level, date, save_dir, ds, td_option):
         tmpk_var = ds.Temperature_isobaric.metpy.sel(lat=slice(85, 15), lon=slice(360-200, 360-10)).squeeze()
         tmpk_smooth = mpcalc.smooth_n_point(tmpk_var, 9, 10)
         thta = mpcalc.potential_temperature(pres[:, None, None], tmpk_smooth)
-        uwnd_var = ds['u-component_of_wind_isobaric'].metpy.sel(lat=slice(85, 15), lon=slice(360-200, 360-10)).squeeze()
-        vwnd_var = ds['v-component_of_wind_isobaric'].metpy.sel(lat=slice(85, 15), lon=slice(360-200, 360-10)).squeeze()
-        uwnd = mpcalc.smooth_n_point(uwnd_var, 9, 2)
-        vwnd = mpcalc.smooth_n_point(vwnd_var, 9, 2)
-        dx, dy = mpcalc.lat_lon_grid_deltas(lons, lats)
-        # pv = mpcalc.potential_vorticity_baroclinic(thta, pres[:, None, None], uwnd, vwnd,
-        #                                    dx[None, :, :], dy[None, :, :],
-        #                                    lats[None, :, None] * units('degrees'))
-        div = mpcalc.divergence(uwnd, vwnd, dx[None, :, :], dy[None, :, :], dim_order='yx')
+        # uwnd_var = ds['u-component_of_wind_isobaric'].metpy.sel(lat=slice(85, 15), lon=slice(360-200, 360-10)).squeeze()
+        # vwnd_var = ds['v-component_of_wind_isobaric'].metpy.sel(lat=slice(85, 15), lon=slice(360-200, 360-10)).squeeze()
+        # uwnd = mpcalc.smooth_n_point(uwnd_var, 9, 2)
+        # vwnd = mpcalc.smooth_n_point(vwnd_var, 9, 2)
+        # dx, dy = mpcalc.lat_lon_grid_deltas(lons, lats)
+        # # pv = mpcalc.potential_vorticity_baroclinic(thta, pres[:, None, None], uwnd, vwnd,
+        # #                                    dx[None, :, :], dy[None, :, :],
+        # #                                    lats[None, :, None] * units('degrees'))
+        # div = mpcalc.divergence(uwnd, vwnd, dx[None, :, :], dy[None, :, :], dim_order='yx')
         level_idx = list(pres.m).index(((level * units('hPa')).to(pres.units)).m)
     # if level == 300:
     #     custom_layout.add_value('NE', 'height', fmt=lambda v: format(v, '1')[1:4], units='m', color='black')
@@ -355,19 +355,19 @@ def uaPlot(data, level, date, save_dir, ds, td_option):
     #Check levels for different contours
     if level == 250 or level == 300:
         # Plot Dashed Contours of Temperature
-        # cs2 = ax.contour(hght.lon, hght.lat, smooth_tmpc.m, range(-60, 51, tint), colors='red', transform=ccrs.PlateCarree())
-        # clabels = plt.clabel(cs2, fmt='%d', colors='red', inline_spacing=5, use_clabeltext=True, fontsize=22)
+        cs2 = ax.contour(hght.lon, hght.lat, smooth_tmpc.m, range(-60, 51, tint), colors='red', transform=ccrs.PlateCarree())
+        clabels = plt.clabel(cs2, fmt='%d', colors='red', inline_spacing=5, use_clabeltext=True, fontsize=22)
         # # Set longer dashes than default
         # for c in cs2.collections:
         #     c.set_dashes([(0, (5.0, 3.0))])
-        temps = 'and Divergence ($10^5$ s$^{-1}$)'
+        temps = 'T'
         # clevs_pv = np.arange(0, 25, 1)
         # Plot the colorfill of divergence, scaled 10^5 every 1 s^1
-        clevs_div1 = np.arange(2, 16, 1)
-        clevs_div2 = np.arange(-15, -1, 1)
+        # clevs_div1 = np.arange(2, 16, 1)
+        # clevs_div2 = np.arange(-15, -1, 1)
         # cs1 = ax.contourf(lons, lats, div[level_idx]*1e5, clevs_div, cmap='PuOr', extend='both', transform=ccrs.PlateCarree())
-        cs1 = ax.contour(lons, lats, div[level_idx]*1e5, clevs_div1, linestyle='dashed', colors='purple', extend='both', transform=ccrs.PlateCarree())
-        cs2 = ax.contour(lons, lats, div[level_idx]*1e5, clevs_div2, linestyle='dashed', colors='orange', extend='both', transform=ccrs.PlateCarree())
+        # cs1 = ax.contour(lons, lats, div[level_idx]*1e5, clevs_div1, linestyle='dashed', colors='purple', extend='both', transform=ccrs.PlateCarree())
+        # cs2 = ax.contour(lons, lats, div[level_idx]*1e5, clevs_div2, linestyle='dashed', colors='orange', extend='both', transform=ccrs.PlateCarree())
         # plt.colorbar(cs1, orientation='vertical', pad=0, aspect=50, extendrect=True)
 
 
