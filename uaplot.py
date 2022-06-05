@@ -385,11 +385,24 @@ def uaPlot(data, level, date, save_dir, ds, td_option, te_option):
 
     if level == 700 or level == 850 or level == 925:
         # Plot Dashed Contours of Temperature
+        if level == 700:
+            dingle_line = ax.contour(lons, lats, smooth_tmpc.m, 10, colors='red', linestyles='solid', linewidths=3, transform=ccrs.PlateCarree())
+            dingle_line_label = plt.clabel(dingle_line, fmt='%d', colors='black', inline_spacing=5, use_clabeltext=True, fontsize=30)
         if te_option == True:
-            cs2 = ax.contour(lons, lats, smooth_tmpc.m, range(210, 360, tint), colors='orange', transform=ccrs.PlateCarree())
+        #Calculate Theta-e
+            tmpk = ds.Temperature_isobaric.metpy.sel(vertical=level*100, lat=slice(85, 15), lon=slice(360-200, 360-10))*units.degK
+            smooth_tmpc = (mpcalc.smooth_n_point(tmpk.data, 9, 10)).to('degC').squeeze()
+            rh = ds.Relative_humidity_isobaric.metpy.sel(vertical=level*100, lat=slice(85, 15), lon=slice(360-200, 360-10))
+            td = mpcalc.dewpoint_from_relative_humidity(tmpk, rh)
+            te = mpcalc.equivalent_potential_temperature(level*units.hPa, tmpk, td)
+            smooth_te = mpcalc.smooth_n_point(te.data, 9,10).squeeze()
+            zeroline = ax.contour(lons, lats, smooth_tmpc.m, 0, colors='red', linestyles='solid', linewidths=3, transform=ccrs.PlateCarree())
+            zeroline_label = plt.clabel(zeroline, fmt='%d', colors='black', inline_spacing=5, use_clabeltext=True, fontsize=30)
+            cs2 = ax.contour(lons, lats, smooth_te.m, range(210, 360, tint), colors='orange', transform=ccrs.PlateCarree())
             clabels = plt.clabel(cs2, fmt='%d', colors='orange', inline_spacing=5, use_clabeltext=True, fontsize=22)
             for c in cs2.collections:
-                c.set_dashes([(0, (5.0, 3.0))])    
+                c.set_dashes([(0, (5.0, 3.0))])   
+  
         # # Set longer dashes than default
         # for c in cs2.collections:
         #     c.set_dashes([(0, (5.0, 3.0))])\
