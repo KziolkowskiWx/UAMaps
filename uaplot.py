@@ -29,57 +29,42 @@ from siphon.catalog import TDSCatalog
 
 def main():
 
-    usage="usage: %prog [--am or --pm] \n example usage for 12z maps: python uamaps.py --am"
+    usage="usage: %prog \n example usage for 12z maps: python uaplot.py --latest --td --te, or python uaplot.py --date=20220523 --td."
     parser = OptionParser(conflict_handler="resolve", usage=usage, version="%prog 1.0 By Kyle Ziolkowski")
-    # parser = OptionParser(conflict_handler="resolve")
     parser.add_option("-h", "--help", dest="help", help="--am or --pm for 12z or 00z obs")
-    parser.add_option("--12z", "--am", dest="am", action="store_true", help="Get 12z obs", default=None)
-    parser.add_option("--00z", "--pm", dest="pm",  action="store_true", help="Get 00z obs", default=None)
-    parser.add_option("--latest", "--latest", dest="",  action="store_true", help="Get 00z obs")
-    parser.add_option("--date", "--date", dest="date",type="str",help="date in format YYYYMMDDHH")
+    parser.add_option("--latest", "--latest", dest="latest",  action="store_true", help="Get 00z obs")
+    parser.add_option("--date", "--date", dest="date",type="str",help="date in format YYYYMMDDHH. Note: HH must be 12 or 00 for 12z or 00z maps", default=False)
     parser.add_option("--td", "--td", dest='td', action="store_true", help="Plot dewpoint instead of dewpoint depression", default=False)
     parser.add_option("--te", "--te",dest='te', action="store_true", help="Plot Theta-e instead of temperatures for 925/850/700 mb", default=False)
     (opt, arg) = parser.parse_args()
 
     if (opt.am == True and opt.pm == True) or (opt.am == None and opt.pm == None):
-        parser.error('No option selected. Please select --12z')
-    if opt.am:
-        hour = 12
-    if opt.pm:
-        hour = 00
+        parser.error('No option for plotting selected. Please select --latest for latest UAMaps or --date=YYYYMMDDHH for a specific time.')
     td_option = opt.td
     te_option = opt.te
-    # if opt.td:
-    #     td_option = True #change default to dewpoint
-    # if opt.te:
-    #     te_option = True
-    # dt = datetime(year,month,day,hour)
-    input_date = datetime.strptime(opt.date, '%Y%m%d')
-    if input_date == None:
+    if opt.date == True:
+        input_date = datetime.strptime(opt.date, '%Y%m%d')
+        hour = datetime(opt.date).hour
+    if opt.latest != False:
         input_date = datetime.utcnow().date()
+        #Get the right hour
+        if datetime.utcnow().hour >= 12 and datetime.utcnow().hour <= 23:
+            hour = 12
+        else:
+            hour = 00
+        
+
     
     start = time.time()
     home = Path.home()
     station_file = home / 'UAMaps/ua_station_list.csv' #Can the string of this location. Full path is not required.
     save_dir = home / 'UAMaps/maps/' #Change the string to choose where to save the file. 
-    td_option = True
-
-
-
-    #For Historical Model Analysis 
-    #base_url = 'https://www.ncei.noaa.gov/thredds/dodsC/model-gfs-g4-anl-files/'
-    # xx = '{}{dt:%Y%m}/{dt:%Y%m%d}/gfs_4_{dt:%Y%m%d}_''{dt:%H}00_000.grb2'.format(base_url, dt=dt)
-    # ds = xr.open_dataset(xx).metpy.parse_cf()
-
-
     dt = datetime.strptime(input_date.strftime('%Y%m%d') + str(hour), '%Y%m%d%H')
     date = dt - timedelta(hours=6) #Go back 6 hours to for 18z Objective Analysis.
     ds = xr.open_dataset('https://thredds.ucar.edu/thredds/dodsC/grib/NCEP/GFS/Global_0p5deg_ana/GFS_Global_0p5deg_ana_{0:%Y%m%d}_{0:%H}00.grib2'.format(date)).metpy.parse_cf()
-
     # levels = [250, 300, 500, 700, 850, 925]
     levels = [700]
     uadata, stations = getData(station_file, dt, hour)
-    
     print('Working on maps.....')
     for level in levels:
         data = generateData(uadata, stations, level)
@@ -411,9 +396,9 @@ def uaPlot(data, level, date, save_dir, ds, hour, td_option, te_option):
             cs2 = ax.contour(lons, lats, smooth_tmpc.m, range(1, 50, tint), colors='red', transform=ccrs.PlateCarree())
             cs3 = ax.contour(lons, lats, smooth_tmpc.m, range(-50, -1, tint), colors='blue', transform=ccrs.PlateCarree())
             zeroline = ax.contour(lons, lats, smooth_tmpc.m, 0, colors='red', linestyles='solid', linewidths=3, transform=ccrs.PlateCarree())
-            # if level == 700:
-            dingle_line = ax.contour(lons, lats, smooth_tmpc.m, 10, colors='brown', linestyles='solid', linewidths=3, transform=ccrs.PlateCarree())
-            dingle_line_label = plt.clabel(dingle_line, fmt='%d', colors='black', inline_spacing=5, use_clabeltext=True, fontsize=30)
+            if level == 700:
+                dingle_line = ax.contour(lons, lats, smooth_tmpc.m, [10], colors='brown', linestyles='solid', linewidths=3, transform=ccrs.PlateCarree())
+                dingle_line_label = plt.clabel(dingle_line, fmt='%d', colors='black', inline_spacing=5, use_clabeltext=True, fontsize=30)
             zeroline_label = plt.clabel(zeroline, fmt='%d', colors='black', inline_spacing=5, use_clabeltext=True, fontsize=30)
             clabels2 = plt.clabel(cs2, fmt='%d', colors='black', inline_spacing=5, use_clabeltext=True, fontsize=30)
             clabels3 = plt.clabel(cs3, fmt='%d', colors='black', inline_spacing=5, use_clabeltext=True, fontsize=30)
