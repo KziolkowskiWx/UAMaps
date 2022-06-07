@@ -37,8 +37,8 @@ def main():
     parser.add_option("--00z", "--pm", dest="pm",  action="store_true", help="Get 00z obs", default=None)
     parser.add_option("--latest", "--latest", dest="",  action="store_true", help="Get 00z obs")
     parser.add_option("--date", "--date", dest="date",type="str",help="date in format YYYYMMDDHH")
-    parser.add_option("--td", "--td", dest='td', action="store_true", help="Plot dewpoint instead of dewpoint depression")
-    parser.add_option("--te", "--te",dest='te', action="store_true", help="Plot Theta-e instead of temperatures for 925/850/700 mb")
+    parser.add_option("--td", "--td", dest='td', action="store_true", help="Plot dewpoint instead of dewpoint depression", default=False)
+    parser.add_option("--te", "--te",dest='te', action="store_true", help="Plot Theta-e instead of temperatures for 925/850/700 mb", default=False)
     (opt, arg) = parser.parse_args()
 
     if (opt.am == True and opt.pm == True) or (opt.am == None and opt.pm == None):
@@ -47,12 +47,14 @@ def main():
         hour = 12
     if opt.pm:
         hour = 00
-    if opt.td:
-        td_option = True #change default to dewpoint
-    if opt.te:
-        te_option = True
+    td_option = opt.td
+    te_option = opt.te
+    # if opt.td:
+    #     td_option = True #change default to dewpoint
+    # if opt.te:
+    #     te_option = True
     # dt = datetime(year,month,day,hour)
-    input_date = opt.date
+    input_date = datetime.strptime(opt.date, '%Y%m%d')
     if input_date == None:
         input_date = datetime.utcnow().date()
     
@@ -75,13 +77,13 @@ def main():
     ds = xr.open_dataset('https://thredds.ucar.edu/thredds/dodsC/grib/NCEP/GFS/Global_0p5deg_ana/GFS_Global_0p5deg_ana_{0:%Y%m%d}_{0:%H}00.grib2'.format(date)).metpy.parse_cf()
 
     # levels = [250, 300, 500, 700, 850, 925]
-    levels = [850]
+    levels = [700]
     uadata, stations = getData(station_file, dt, hour)
     
     print('Working on maps.....')
     for level in levels:
         data = generateData(uadata, stations, level)
-        uaPlot(data, level, dt, save_dir, ds, td_option, te_option)
+        uaPlot(data, level, dt, save_dir, ds, hour, td_option, te_option)
     end = time.time()
     total_time = round(end-start, 2)
     print('Process Complete..... Total time = {}s'.format(total_time))
@@ -232,7 +234,7 @@ def mapbackground():
     return ax
 
 
-def uaPlot(data, level, date, save_dir, ds, td_option, te_option):
+def uaPlot(data, level, date, save_dir, ds, hour, td_option, te_option):
 
 
     custom_layout = StationPlotLayout()
@@ -287,10 +289,10 @@ def uaPlot(data, level, date, save_dir, ds, td_option, te_option):
         custom_layout.add_value('NE', 'height', fmt=lambda v: format(v, '1')[1:4], units='m', color='black')
         if td_option == True:
             custom_layout.add_value('SW', 'dew_point_temperature', units='degC', color='green')
-            temps = 'Td, and Temperature'
+            temps = 'Td'
         if td_option == False:
             custom_layout.add_value('SW', 'tdd', units='degC', color='green')
-            temps = 'Tdd, and Temperature'
+            temps = 'Tdd'
         # custom_layout.add_value('SW', 'tdd', units='degC', color='green')
         # temps = 'Tdd, and Theta-e'
         custom_layout.add_value('SE', 'thetae', units='degK', color='orange')
@@ -358,7 +360,7 @@ def uaPlot(data, level, date, save_dir, ds, td_option, te_option):
         # # Set longer dashes than default
         # for c in cs2.collections:
         #     c.set_dashes([(0, (5.0, 3.0))])
-        temps = 'T'
+        temps = 'Temperature'
         # clevs_pv = np.arange(0, 25, 1)
         # Plot the colorfill of divergence, scaled 10^5 every 1 s^1
         # clevs_div1 = np.arange(2, 16, 1)
@@ -376,7 +378,7 @@ def uaPlot(data, level, date, save_dir, ds, td_option, te_option):
         # Set longer dashes than default
         for c in cs2.collections:
             c.set_dashes([(0, (5.0, 3.0))])
-        temps = 'T, and Absolute Vorticity $*10^5$ ($s^{-1}$)'
+        temps = 'Temperature, and Absolute Vorticity $*10^5$ ($s^{-1}$)'
 
         #plot vorticity
         clevvort500 = np.arange(-8, 50, 2)
@@ -384,37 +386,39 @@ def uaPlot(data, level, date, save_dir, ds, td_option, te_option):
         plt.clabel(cs1, fontsize=10, inline=1, inline_spacing=10, fmt='%i', rightside_up=True, use_clabeltext=True)
 
     if level == 700 or level == 850 or level == 925:
-        # Plot Dashed Contours of Temperature
-        if level == 700:
-            dingle_line = ax.contour(lons, lats, smooth_tmpc.m, 10, colors='red', linestyles='solid', linewidths=3, transform=ccrs.PlateCarree())
-            dingle_line_label = plt.clabel(dingle_line, fmt='%d', colors='black', inline_spacing=5, use_clabeltext=True, fontsize=30)
+        tmpk = ds.Temperature_isobaric.metpy.sel(vertical=level*100, lat=slice(85, 15), lon=slice(360-200, 360-10))*units.degK
+        smooth_tmpc = (mpcalc.smooth_n_point(tmpk.data, 9, 10)).to('degC').squeeze()
+
         if te_option == True:
         #Calculate Theta-e
-            tmpk = ds.Temperature_isobaric.metpy.sel(vertical=level*100, lat=slice(85, 15), lon=slice(360-200, 360-10))*units.degK
-            smooth_tmpc = (mpcalc.smooth_n_point(tmpk.data, 9, 10)).to('degC').squeeze()
             rh = ds.Relative_humidity_isobaric.metpy.sel(vertical=level*100, lat=slice(85, 15), lon=slice(360-200, 360-10))
             td = mpcalc.dewpoint_from_relative_humidity(tmpk, rh)
             te = mpcalc.equivalent_potential_temperature(level*units.hPa, tmpk, td)
             smooth_te = mpcalc.smooth_n_point(te.data, 9,10).squeeze()
             zeroline = ax.contour(lons, lats, smooth_tmpc.m, 0, colors='red', linestyles='solid', linewidths=3, transform=ccrs.PlateCarree())
             zeroline_label = plt.clabel(zeroline, fmt='%d', colors='black', inline_spacing=5, use_clabeltext=True, fontsize=30)
+            if level == 700:
+                dingle_line = ax.contour(lons, lats, smooth_tmpc.m, [10], colors='brown', linestyles='solid', linewidths=3, transform=ccrs.PlateCarree())
+                dingle_line_label = plt.clabel(dingle_line, fmt='%d', colors='black', inline_spacing=5, use_clabeltext=True, fontsize=30)
             cs2 = ax.contour(lons, lats, smooth_te.m, range(210, 360, tint), colors='orange', transform=ccrs.PlateCarree())
             clabels = plt.clabel(cs2, fmt='%d', colors='orange', inline_spacing=5, use_clabeltext=True, fontsize=22)
+            temps = temps + ', and Theta-e'
+            # Set longer dashes than default
             for c in cs2.collections:
                 c.set_dashes([(0, (5.0, 3.0))])   
   
-        # # Set longer dashes than default
-        # for c in cs2.collections:
-        #     c.set_dashes([(0, (5.0, 3.0))])\
         else:
-            tmpk = ds.Temperature_isobaric.metpy.sel(vertical=level*100, lat=slice(85, 15), lon=slice(360-200, 360-10))*units.degK
-            smooth_tmpc = (mpcalc.smooth_n_point(tmpk.data, 9, 10)).to('degC').squeeze()
             cs2 = ax.contour(lons, lats, smooth_tmpc.m, range(1, 50, tint), colors='red', transform=ccrs.PlateCarree())
             cs3 = ax.contour(lons, lats, smooth_tmpc.m, range(-50, -1, tint), colors='blue', transform=ccrs.PlateCarree())
             zeroline = ax.contour(lons, lats, smooth_tmpc.m, 0, colors='red', linestyles='solid', linewidths=3, transform=ccrs.PlateCarree())
+            # if level == 700:
+            dingle_line = ax.contour(lons, lats, smooth_tmpc.m, 10, colors='brown', linestyles='solid', linewidths=3, transform=ccrs.PlateCarree())
+            dingle_line_label = plt.clabel(dingle_line, fmt='%d', colors='black', inline_spacing=5, use_clabeltext=True, fontsize=30)
             zeroline_label = plt.clabel(zeroline, fmt='%d', colors='black', inline_spacing=5, use_clabeltext=True, fontsize=30)
             clabels2 = plt.clabel(cs2, fmt='%d', colors='black', inline_spacing=5, use_clabeltext=True, fontsize=30)
             clabels3 = plt.clabel(cs3, fmt='%d', colors='black', inline_spacing=5, use_clabeltext=True, fontsize=30)
+            temps = temps + ', and Temperature'
+        # Set longer dashes than default
             for c in cs2.collections:
                     c.set_dashes([(0, (5.0, 3.0))])    
             for c in cs3.collections:
@@ -426,7 +430,7 @@ def uaPlot(data, level, date, save_dir, ds, td_option, te_option):
     text = AnchoredText(str(level) + 'mb Wind, Heights, '+ temps +' Valid: {0:%Y-%m-%d} {0:%H}:00 UTC'.format(date), loc=3, frameon=True, prop=dict(fontsize=30))
     ax.add_artist(text)
     plt.tight_layout()
-    save_fname = '{0:%Y%m%d_%H}z_'.format(date) + str(level) +'mb.png'
+    save_fname = str(level) +'mb_'+ str(hour) +'z.png'
     plt.savefig(save_dir / save_fname, dpi = dpi, bbox_inches='tight')
     print('saving {}'.format(level))
     #plt.show()
