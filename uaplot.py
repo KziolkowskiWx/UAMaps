@@ -29,16 +29,17 @@ from siphon.catalog import TDSCatalog
 
 def main():
 
-    usage="usage: %prog \n example usage for 12z maps: python uaplot.py --latest --td --te, or python uaplot.py --date=20220523 --td."
+    usage="usage: %prog \n example usage for 12z maps: python uaplot.py --latest --td --te, or python uaplot.py --date=20220523 --td. Use --levels=850,700 to plot specific levels"
     parser = OptionParser(conflict_handler="resolve", usage=usage, version="%prog 1.0 By Kyle Ziolkowski")
     parser.add_option("-h", "--help", dest="help", help="--am or --pm for 12z or 00z obs")
     parser.add_option("--latest", "--latest", dest="latest",  action="store_true", help="Get 00z obs")
     parser.add_option("--date", "--date", dest="date",type="str",help="date in format YYYYMMDDHH. Note: HH must be 12 or 00 for 12z or 00z maps", default=False)
     parser.add_option("--td", "--td", dest='td', action="store_true", help="Plot dewpoint instead of dewpoint depression", default=False)
     parser.add_option("--te", "--te",dest='te', action="store_true", help="Plot Theta-e instead of temperatures for 925/850/700 mb", default=False)
+    parser.add_option("--levels", "--levels",dest='levels',type="str", help="Levels in which to plot. Use levels=850,500 to plot specific levels. This option is not required to plot all levels (250, 300, 500, 700, 850, 925).", default='All')
     (opt, arg) = parser.parse_args()
 
-    if (opt.am == True and opt.pm == True) or (opt.am == None and opt.pm == None):
+    if  opt.latest == None or opt.date == None:
         parser.error('No option for plotting selected. Please select --latest for latest UAMaps or --date=YYYYMMDDHH for a specific time.')
     td_option = opt.td
     te_option = opt.te
@@ -52,6 +53,10 @@ def main():
             hour = 12
         else:
             hour = 00
+    if opt.levels == 'All':
+        levels = [250, 300, 500, 700, 850, 925]
+    else:
+        levels = [int(i) for i in opt.levels.split(',')]
         
 
     
@@ -62,8 +67,6 @@ def main():
     dt = datetime.strptime(input_date.strftime('%Y%m%d') + str(hour), '%Y%m%d%H')
     date = dt - timedelta(hours=6) #Go back 6 hours to for 18z Objective Analysis.
     ds = xr.open_dataset('https://thredds.ucar.edu/thredds/dodsC/grib/NCEP/GFS/Global_0p5deg_ana/GFS_Global_0p5deg_ana_{0:%Y%m%d}_{0:%H}00.grib2'.format(date)).metpy.parse_cf()
-    # levels = [250, 300, 500, 700, 850, 925]
-    levels = [700]
     uadata, stations = getData(station_file, dt, hour)
     print('Working on maps.....')
     for level in levels:
@@ -393,8 +396,8 @@ def uaPlot(data, level, date, save_dir, ds, hour, td_option, te_option):
                 c.set_dashes([(0, (5.0, 3.0))])   
   
         else:
-            cs2 = ax.contour(lons, lats, smooth_tmpc.m, range(1, 50, tint), colors='red', transform=ccrs.PlateCarree())
-            cs3 = ax.contour(lons, lats, smooth_tmpc.m, range(-50, -1, tint), colors='blue', transform=ccrs.PlateCarree())
+            cs2 = ax.contour(lons, lats, smooth_tmpc.m, range(4, 56, tint), colors='red', transform=ccrs.PlateCarree())
+            cs3 = ax.contour(lons, lats, smooth_tmpc.m, range(-50, -4, tint), colors='blue', transform=ccrs.PlateCarree())
             zeroline = ax.contour(lons, lats, smooth_tmpc.m, 0, colors='red', linestyles='solid', linewidths=3, transform=ccrs.PlateCarree())
             if level == 700:
                 dingle_line = ax.contour(lons, lats, smooth_tmpc.m, [10], colors='brown', linestyles='solid', linewidths=3, transform=ccrs.PlateCarree())
