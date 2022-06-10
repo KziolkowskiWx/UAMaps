@@ -323,7 +323,7 @@ def uaPlot(data, level, date, save_dir, ds, hour, td_option, te_option):
 
     stationData = dataDict(data) 
     stationplot = StationPlot(ax, stationData['longitude'], stationData['latitude'],
-                              transform=ccrs.PlateCarree(), fontsize=18)
+                              transform=ccrs.PlateCarree(), fontsize=26)
     custom_layout.plot(stationplot, stationData)
 
     # Plot Solid Contours of Geopotential Height
