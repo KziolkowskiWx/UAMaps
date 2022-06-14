@@ -32,20 +32,20 @@ def main():
     usage="usage: %prog \n example usage for 12z maps: python uaplot.py --latest --td --te, or python uaplot.py --date=20220523 --td. Use --levels=850,700 to plot specific levels"
     parser = OptionParser(conflict_handler="resolve", usage=usage, version="%prog 1.0 By Kyle Ziolkowski")
     parser.add_option("-h", "--help", dest="help", help="--am or --pm for 12z or 00z obs")
-    parser.add_option("--latest", "--latest", dest="latest",  action="store_true", help="Get 00z obs")
+    parser.add_option("--latest", "--latest", dest="latest",  action="store_true", help="Get 00z obs", default=False)
     parser.add_option("--date", "--date", dest="date",type="str",help="date in format YYYYMMDDHH. Note: HH must be 12 or 00 for 12z or 00z maps", default=False)
     parser.add_option("--td", "--td", dest='td', action="store_true", help="Plot dewpoint instead of dewpoint depression", default=False)
     parser.add_option("--te", "--te",dest='te', action="store_true", help="Plot Theta-e instead of temperatures for 925/850/700 mb", default=False)
     parser.add_option("--levels", "--levels",dest='levels',type="str", help="Levels in which to plot. Use levels=850,500 to plot specific levels. This option is not required to plot all levels (250, 300, 500, 700, 850, 925).", default='All')
     (opt, arg) = parser.parse_args()
 
-    if  opt.latest == None or opt.date == None:
+    if  opt.latest == False and opt.date == False:
         parser.error('No option for plotting selected. Please select --latest for latest UAMaps or --date=YYYYMMDDHH for a specific time.')
     td_option = opt.td
     te_option = opt.te
-    if opt.date == True:
-        input_date = datetime.strptime(opt.date, '%Y%m%d')
-        hour = datetime(opt.date).hour
+    if opt.date != False:
+        input_date = datetime.strptime(opt.date, '%Y%m%d%H').date()
+        hour = datetime.strptime(opt.date, '%Y%m%d%H').hour
     if opt.latest != False:
         input_date = datetime.utcnow().date()
         #Get the right hour
@@ -71,7 +71,7 @@ def main():
     print('Working on maps.....')
     for level in levels:
         data = generateData(uadata, stations, level)
-        uaPlot(data, level, dt, save_dir, ds, hour, td_option, te_option)
+        uaPlot(data, level, dt, save_dir, ds, hour, td_option, te_option, opt.date)
     end = time.time()
     total_time = round(end-start, 2)
     print('Process Complete..... Total time = {}s'.format(total_time))
@@ -222,7 +222,7 @@ def mapbackground():
     return ax
 
 
-def uaPlot(data, level, date, save_dir, ds, hour, td_option, te_option):
+def uaPlot(data, level, date, save_dir, ds, hour, td_option, te_option, date_option):
 
 
     custom_layout = StationPlotLayout()
@@ -418,7 +418,13 @@ def uaPlot(data, level, date, save_dir, ds, hour, td_option, te_option):
     text = AnchoredText(str(level) + 'mb Wind, Heights, '+ temps +' Valid: {0:%Y-%m-%d} {0:%H}:00 UTC'.format(date), loc=3, frameon=True, prop=dict(fontsize=30))
     ax.add_artist(text)
     plt.tight_layout()
-    save_fname = str(level) +'mb_'+ str(hour) +'z.png'
+    if date_option != False:
+        save_fname = str(level) +'mb_{0:%Y%m%d%H%M}z.png'.format(date)
+    else:
+        if hour == 12:
+            save_fname = str(level) +'mb_'+ str(hour) +'z.png'
+        if hour == 0:
+            save_fname = str(level) +'mb_'+ str(hour) +'0z.png'
     plt.savefig(save_dir / save_fname, dpi = dpi, bbox_inches='tight')
     print('saving {}'.format(level))
     #plt.show()
