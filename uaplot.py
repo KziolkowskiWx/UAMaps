@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-from email.policy import default
 from siphon.simplewebservice.wyoming import WyomingUpperAir
 import pandas as pd
 import cartopy.crs as ccrs
@@ -20,7 +19,6 @@ import numpy as np
 import xarray as xr
 import scipy.ndimage as ndimage
 from optparse import OptionParser
-import multiprocessing as mp
 import time
 from pathlib import Path
 from os import path
