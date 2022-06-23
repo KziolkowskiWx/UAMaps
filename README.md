@@ -24,7 +24,7 @@ python uaplot.py --latest
 ```
 
 
-This will plot the latest 12z or 00z maps depending on the time at which the program is run. Data is from the University of Wyoming sounding archive (https://weather.uwyo.edu/upperair/sounding.html). 
+This will plot the latest 12z or 00z maps depending on the time at which the program is run. Data is from the [University of Wyoming sounding archive](https://weather.uwyo.edu/upperair/sounding.html). 
 
 Maps from past dates can also be plotted by passing a --date=YYYYMMDDHH argument. Note: The HH must be either 12 or 00. For example
 
