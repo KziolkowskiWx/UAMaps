@@ -51,3 +51,7 @@ python uaplot.py --latest --td --te
 ```
 
 This will plot dewpoint on the station plot for 850 and 925 (700 mb will always default to dewpoint depression) and theta-e for 700, 850, and 925 mb instead of temperature. A solid red line (0 degrees C) will always be plotted on 700, 850, and 925 mb to highlight the freezing level, and a brown 10 degrees C line on 700 mb is also always plotted for thunderstorm analysis.
+
+## Output
+
+By default, this script will output upper air maps as PNG files. Using the option `--compress_output` will enable more aggressive PNG optimization, including compression and indexing, reducing the file size by approximately 60%. This comes at the cost of an increased run time.
