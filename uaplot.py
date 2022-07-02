@@ -22,7 +22,10 @@ from optparse import OptionParser
 import time
 from pathlib import Path
 from os import path
+from os import getcwd
 from siphon.catalog import TDSCatalog
+from io import BytesIO
+from PIL import Image
 
 
 def main():
@@ -35,6 +38,7 @@ def main():
     parser.add_option("--td", "--td", dest='td', action="store_true", help="Plot dewpoint instead of dewpoint depression", default=False)
     parser.add_option("--te", "--te",dest='te', action="store_true", help="Plot Theta-e instead of temperatures for 925/850/700 mb", default=False)
     parser.add_option("--levels", "--levels",dest='levels',type="str", help="Levels in which to plot. Use levels=850,500 to plot specific levels. This option is not required to plot all levels (250, 300, 500, 700, 850, 925).", default='All')
+    parser.add_option("--compress_output", "--compress_output", dest="compress",action="store_true", help="Compress the output PNGs when saving; will add extra to the runtime.", default=False)
     (opt, arg) = parser.parse_args()
 
     if  opt.latest == False and opt.date == False:
@@ -60,16 +64,18 @@ def main():
     
     start = time.time()
     home = Path.home()
-    station_file = home / 'UAMaps/ua_station_list.csv' #Can the string of this location. Full path is not required.
-    save_dir = home / 'UAMaps/maps/' #Change the string to choose where to save the file. 
+    cwd = getcwd()
+    station_file = cwd + '/ua_station_list.csv'
+    save_dir = cwd + '/maps/' #Change the string to choose where to save the file. 
     dt = datetime.strptime(input_date.strftime('%Y%m%d') + str(hour), '%Y%m%d%H')
     date = dt - timedelta(hours=6) #Go back 6 hours to for 18z Objective Analysis.
     ds = xr.open_dataset('https://thredds.ucar.edu/thredds/dodsC/grib/NCEP/GFS/Global_0p5deg_ana/GFS_Global_0p5deg_ana_{0:%Y%m%d}_{0:%H}00.grib2'.format(date)).metpy.parse_cf()
     uadata, stations = getData(station_file, dt, hour)
-    print('Working on maps.....')
+    print('Working on maps:')
     for level in levels:
+        print ("    Processing {}...".format(level))
         data = generateData(uadata, stations, level)
-        uaPlot(data, level, dt, save_dir, ds, hour, td_option, te_option, opt.date)
+        uaPlot(data, level, dt, save_dir, ds, hour, td_option, te_option, opt.date, opt.compress)
     end = time.time()
     total_time = round(end-start, 2)
     print('Process Complete..... Total time = {}s'.format(total_time))
@@ -84,7 +90,7 @@ def getData(station_file, date, hh):
     a dictionary along with the data. 
     """
     
-    print ('Getting station data...')
+    print ('Getting station data:')
     station_data = pd.read_csv(station_file)
     stations, lats, lons = station_data['station_id'].values, station_data['lat'].values, station_data['lon'].values
     stations = list(stations)    
@@ -92,15 +98,21 @@ def getData(station_file, date, hh):
     # date = datetime(date.year, date.month, date.day, hh)
     data = {} #a dictionary for our data
     station_list = []
-    
+    total_stations = 0
+    data_success = 0
     for station, lat, lon in zip(stations, lats, lons):
+        print ('    ' + station, end='')
+        total_stations += 1
         try:
             df = WyomingUpperAir.request_data(date, station)
             data[station] = [df, lat, lon]
             station_list += [station]
+            data_success += 1
+            print('')
         except:
+            print ('...failed.')
             pass
-    print ('Data retrieved...')
+    print ('Data retrieved. Fetched ' + str(data_success) + '/' + str(total_stations) + "(" + str(round(100*(data_success/total_stations))) + "%) of requested stations.")
     return data, station_list
 
 
@@ -220,8 +232,7 @@ def mapbackground():
     return ax
 
 
-def uaPlot(data, level, date, save_dir, ds, hour, td_option, te_option, date_option):
-
+def uaPlot(data, level, date, save_dir, ds, hour, td_option, te_option, date_option, image_compress):
 
     custom_layout = StationPlotLayout()
     custom_layout.add_barb('eastward_wind', 'northward_wind', units='knots')
@@ -423,12 +434,17 @@ def uaPlot(data, level, date, save_dir, ds, hour, td_option, te_option, date_opt
             save_fname = str(level) +'mb_'+ str(hour) +'z.png'
         if hour == 0:
             save_fname = str(level) +'mb_'+ str(hour) +'0z.png'
-    plt.savefig(save_dir / save_fname, dpi = dpi, bbox_inches='tight')
-    print('saving {}'.format(level))
+    if image_compress is False:
+        plt.savefig(save_dir + "/" + save_fname, dpi = dpi, bbox_inches='tight')
+    else:
+        temp_img = BytesIO()
+        plt.savefig(temp_img, dpi = dpi, bbox_inches='tight')
+        temp_img.seek(0)
+        im = Image.open(temp_img)
+        im2 = im.convert('RGB').convert('P', palette=Image.ADAPTIVE, colors=256)
+        im2.save(save_dir + "/" + save_fname, format='PNG', optimize=True)
+    print('        Image saved.')
     #plt.show()
-
-
-
 
 if __name__ == '__main__':
     main()
