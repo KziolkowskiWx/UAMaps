@@ -4,8 +4,8 @@ import pandas as pd
 import cartopy.crs as ccrs
 import cartopy.feature as feat
 #Uncomment the two lines below if running in cron 
-#import matplotlib as mpl
-#mpl.use('Agg')
+import matplotlib as mpl
+mpl.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.offsetbox import AnchoredText
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -70,6 +70,8 @@ def main():
     dt = datetime.strptime(input_date.strftime('%Y%m%d') + str(hour), '%Y%m%d%H')
     date = dt - timedelta(hours=6) #Go back 6 hours to for 18z Objective Analysis.
     ds = xr.open_dataset('https://thredds.ucar.edu/thredds/dodsC/grib/NCEP/GFS/Global_0p5deg_ana/GFS_Global_0p5deg_ana_{0:%Y%m%d}_{0:%H}00.grib2'.format(date)).metpy.parse_cf()
+    #Added to handle new GFS analysis files. GFS files from THREDDS now contain a bunch of dates
+    ds = ds.sel(time=date) #This grabs the proper date for analysis.
     uadata, stations = getData(station_file, dt, hour)
     print('Working on maps:')
     for level in levels:
