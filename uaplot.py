@@ -74,13 +74,13 @@ def main():
 
     
     start = time.time()
-	if (opt.cwd):
-		path_root = getcwd()
-	else:
-		path_root = Path.home().as_posix()
-	
-    station_file = path_root + '/UAMaps/ua_station_list.csv'
-    save_dir = path_root + '/UAMaps/maps/' #Change the string to choose where to save the file. 
+    if (opt.cwd):
+        path_root = getcwd()
+    else:
+        path_root = Path.home().as_posix() + "/UAMaps/"
+
+    station_file = path_root + '/ua_station_list.csv'
+    save_dir = path_root + '/maps/' #Change the string to choose where to save the file. 
     dt = datetime.strptime(input_date.strftime('%Y%m%d') + str(hour), '%Y%m%d%H')
     date = dt - timedelta(hours=6) #Go back 6 hours to for 18z Objective Analysis.
     ds = xr.open_dataset('https://thredds.ucar.edu/thredds/dodsC/grib/NCEP/GFS/Global_0p5deg_ana/GFS_Global_0p5deg_ana_{0:%Y%m%d}_{0:%H}00.grib2'.format(date)).metpy.parse_cf()
