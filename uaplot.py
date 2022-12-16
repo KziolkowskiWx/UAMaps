@@ -39,7 +39,17 @@ def main():
     parser.add_option("--te", "--te",dest='te', action="store_true", help="Plot Theta-e instead of temperatures for 925/850/700 mb", default=False)
     parser.add_option("--levels", "--levels",dest='levels',type="str", help="Levels in which to plot. Use levels=850,500 to plot specific levels. This option is not required to plot all levels (250, 300, 500, 700, 850, 925).", default='All')
     parser.add_option("--compress_output", "--compress_output", dest="compress",action="store_true", help="Compress the output PNGs when saving; will add extra to the runtime.", default=False)
-    parser.add_option("--cwd", "--cwd", dest="cwd",action="store_true", help="Use the current working directory rather than a hard-coded path.", default=False)
+    parser.add_option("--cwd", "--cwd", dest="cwd", action="store_true",
+                      help="Flag to use the current working directory instead of ~/UAMaps/.", default=False)
+    parser.add_option("--png_colours", "--png_colours", dest="png_colours",
+                      type="int", help="Number of colours to use in PNG comprssion.", default=256)
+    parser.add_option("--thumbnails", "--thumbnails", dest="thumbnails",
+                      action="store_true", help="Enable to generate thumbnail output as well.", default=False)
+    parser.add_option("--thumbnail_size", "--thumbnail_size", dest="thumbnail_size",
+                      type="int", help="Specify the maximum pixel dimension of a generated thumbnail.", default=640)
+    parser.add_option("--long_filenames", "--long_filenames", dest="long_filenames",
+                      action="store_true", help="Enable to create files with the full datestring in the output filenames.", default=False)
+					  
     (opt, arg) = parser.parse_args()
 
     if  opt.latest == False and opt.date == False:
@@ -411,46 +421,59 @@ def uaPlot(data, level, date, save_dir, ds, hour, td_option, te_option, date_opt
                 c.set_dashes([(0, (5.0, 3.0))])   
   
         else:
-            cs2 = ax.contour(lons, lats, smooth_tmpc.m, range(4, 56, tint), colors='red', transform=ccrs.PlateCarree())
-            cs3 = ax.contour(lons, lats, smooth_tmpc.m, range(-50, -4, tint), colors='blue', transform=ccrs.PlateCarree())
-            zeroline = ax.contour(lons, lats, smooth_tmpc.m, 0, colors='red', linestyles='solid', linewidths=3, transform=ccrs.PlateCarree())
+            cs2 = ax.contour(lons, lats, smooth_tmpc.m, range(
+                4, 56, tint), colors='red', transform=ccrs.PlateCarree())
+            cs3 = ax.contour(lons, lats, smooth_tmpc.m, range(-50, -4,
+                                                              tint), colors='blue', transform=ccrs.PlateCarree())
+            zeroline = ax.contour(lons, lats, smooth_tmpc.m, 0, colors='red',
+                                  linestyles='solid', linewidths=3, transform=ccrs.PlateCarree())
             if level == 700:
-                dingle_line = ax.contour(lons, lats, smooth_tmpc.m, [10], colors='brown', linestyles='solid', linewidths=3, transform=ccrs.PlateCarree())
-                dingle_line_label = plt.clabel(dingle_line, fmt='%d', colors='black', inline_spacing=5, use_clabeltext=True, fontsize=30)
-            zeroline_label = plt.clabel(zeroline, fmt='%d', colors='black', inline_spacing=5, use_clabeltext=True, fontsize=30)
-            clabels2 = plt.clabel(cs2, fmt='%d', colors='black', inline_spacing=5, use_clabeltext=True, fontsize=30)
-            clabels3 = plt.clabel(cs3, fmt='%d', colors='black', inline_spacing=5, use_clabeltext=True, fontsize=30)
+                dingle_line = ax.contour(lons, lats, smooth_tmpc.m, [
+                                         10], colors='brown', linestyles='solid', linewidths=3, transform=ccrs.PlateCarree())
+                dingle_line_label = plt.clabel(
+                    dingle_line, fmt='%d', colors='black', inline_spacing=5, use_clabeltext=True, fontsize=30)
+            zeroline_label = plt.clabel(
+                zeroline, fmt='%d', colors='black', inline_spacing=5, use_clabeltext=True, fontsize=30)
+            clabels2 = plt.clabel(cs2, fmt='%d', colors='black',
+                                  inline_spacing=5, use_clabeltext=True, fontsize=30)
+            clabels3 = plt.clabel(cs3, fmt='%d', colors='black',
+                                  inline_spacing=5, use_clabeltext=True, fontsize=30)
             temps = temps + ', and Temperature'
         # Set longer dashes than default
             for c in cs2.collections:
-                    c.set_dashes([(0, (5.0, 3.0))])    
+                c.set_dashes([(0, (5.0, 3.0))])
             for c in cs3.collections:
-                    c.set_dashes([(0, (5.0, 3.0))])    
-            
-        
-    
-    dpi = plt.rcParams['savefig.dpi'] = 255    
-    text = AnchoredText(str(level) + 'mb Wind, Heights, '+ temps +' Valid: {0:%Y-%m-%d} {0:%H}:00 UTC'.format(date), loc=3, frameon=True, prop=dict(fontsize=30))
+                c.set_dashes([(0, (5.0, 3.0))])
+
+    dpi = plt.rcParams['savefig.dpi'] = 255
+    text = AnchoredText(str(level) + 'mb Wind, Heights, ' + temps +
+                        ' Valid: {0:%Y-%m-%d} {0:%H}:00 UTC'.format(date), loc=3, frameon=True, prop=dict(fontsize=30))
     ax.add_artist(text)
     plt.tight_layout()
     if date_option != False:
-        save_fname = str(level) +'mb_{0:%Y%m%d%H%M}z.png'.format(date)
+        save_fname = str(level) + 'mb_{0:%Y%m%d%H%M}z.png'.format(date)
     else:
         if hour == 12:
-            save_fname = str(level) +'mb_'+ str(hour) +'z.png'
+            save_fname = str(level) + 'mb_' + str(hour) + 'z.png'
+            thumb_fname = str(level) + 'mb_' + str(hour) + 'z_thumbnail.png'
         if hour == 0:
-            save_fname = str(level) +'mb_'+ str(hour) +'0z.png'
+            save_fname = str(level) + 'mb_' + str(hour) + '0z.png'
+            thumb_fname = str(level) + 'mb_' + str(hour) + '0z_thumbnail.png'
     if image_compress is False:
-        plt.savefig(save_dir + "/" + save_fname, dpi = dpi, bbox_inches='tight')
+        plt.savefig(save_dir + "/" + save_fname, dpi=dpi, bbox_inches='tight')
     else:
         temp_img = BytesIO()
-        plt.savefig(temp_img, dpi = dpi, bbox_inches='tight')
+        plt.savefig(temp_img, dpi=dpi, bbox_inches='tight')
         temp_img.seek(0)
         im = Image.open(temp_img)
-        im2 = im.convert('RGB').convert('P', palette=Image.ADAPTIVE, colors=256)
+        im2 = im.convert('RGB').convert(
+            'P', palette=Image.ADAPTIVE, colors=png_colours)
         im2.save(save_dir + "/" + save_fname, format='PNG', optimize=True)
+        if (thumbnails != False):
+            im2.thumbnail((thumbnail_size, thumbnail_size), Image.ANTIALIAS)
+            im2.save(save_dir + "/" + thumb_fname, format='PNG', optimize=True)
     print('        Image saved.')
-    #plt.show()
+    # plt.show()
 
 if __name__ == '__main__':
     main()
