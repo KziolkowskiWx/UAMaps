@@ -55,3 +55,7 @@ This will plot dewpoint on the station plot for 850 and 925 (700 mb will always 
 ## Output
 
 By default, this script will output upper air maps as PNG files. Using the option `--compress_output` will enable more aggressive PNG optimization, including compression and indexing, reducing the file size by approximately 60%. This comes at the cost of an increased run time.
+
+## Additional Options
+
+* The flag `--cwd` will tell the application to use the current working directory rather than a hard-coded path.
