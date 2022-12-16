@@ -39,6 +39,7 @@ def main():
     parser.add_option("--te", "--te",dest='te', action="store_true", help="Plot Theta-e instead of temperatures for 925/850/700 mb", default=False)
     parser.add_option("--levels", "--levels",dest='levels',type="str", help="Levels in which to plot. Use levels=850,500 to plot specific levels. This option is not required to plot all levels (250, 300, 500, 700, 850, 925).", default='All')
     parser.add_option("--compress_output", "--compress_output", dest="compress",action="store_true", help="Compress the output PNGs when saving; will add extra to the runtime.", default=False)
+    parser.add_option("--cwd", "--cwd", dest="cwd",action="store_true", help="Use the current working directory rather than a hard-coded path.", default=False)
     (opt, arg) = parser.parse_args()
 
     if  opt.latest == False and opt.date == False:
@@ -63,10 +64,13 @@ def main():
 
     
     start = time.time()
-    home = Path.home().as_posix()
-    cwd = getcwd()
-    station_file = home + '/UAMaps/ua_station_list.csv'
-    save_dir = home + '/UAMaps/maps/' #Change the string to choose where to save the file. 
+	if (opt.cwd):
+		path_root = getcwd()
+	else:
+		path_root = Path.home().as_posix()
+	
+    station_file = path_root + '/UAMaps/ua_station_list.csv'
+    save_dir = path_root + '/UAMaps/maps/' #Change the string to choose where to save the file. 
     dt = datetime.strptime(input_date.strftime('%Y%m%d') + str(hour), '%Y%m%d%H')
     date = dt - timedelta(hours=6) #Go back 6 hours to for 18z Objective Analysis.
     ds = xr.open_dataset('https://thredds.ucar.edu/thredds/dodsC/grib/NCEP/GFS/Global_0p5deg_ana/GFS_Global_0p5deg_ana_{0:%Y%m%d}_{0:%H}00.grib2'.format(date)).metpy.parse_cf()
