@@ -38,18 +38,18 @@ def main():
     parser.add_option("--td", "--td", dest='td', action="store_true", help="Plot dewpoint instead of dewpoint depression", default=False)
     parser.add_option("--te", "--te",dest='te', action="store_true", help="Plot Theta-e instead of temperatures for 925/850/700 mb", default=False)
     parser.add_option("--levels", "--levels",dest='levels',type="str", help="Levels in which to plot. Use levels=850,500 to plot specific levels. This option is not required to plot all levels (250, 300, 500, 700, 850, 925).", default='All')
-    parser.add_option("--compress_output", "--compress_output", dest="compress",action="store_true", help="Compress the output PNGs when saving; will add extra to the runtime.", default=False)
+    parser.add_option("--compress-output", "--compress-output", dest="compress",action="store_true", help="Compress the output PNGs when saving; will add extra to the runtime.", default=False)
     parser.add_option("--cwd", "--cwd", dest="cwd", action="store_true",
                       help="Flag to use the current working directory instead of ~/UAMaps/.", default=False)
-    parser.add_option("--png_colours", "--png_colours", dest="png_colours",
+    parser.add_option("--png-colours", "--png-colours", dest="png_colours",
                       type="int", help="Number of colours to use in PNG comprssion.", default=256)
     parser.add_option("--thumbnails", "--thumbnails", dest="thumbnails",
                       action="store_true", help="Enable to generate thumbnail output as well.", default=False)
-    parser.add_option("--thumbnail_size", "--thumbnail_size", dest="thumbnail_size",
+    parser.add_option("--thumbnail-size", "--thumbnail-size", dest="thumbnail_size",
                       type="int", help="Specify the maximum pixel dimension of a generated thumbnail.", default=640)
-    parser.add_option("--long_filenames", "--long_filenames", dest="long_filenames",
+    parser.add_option("--long-filenames", "--long-filenames", dest="long_filenames",
                       action="store_true", help="Enable to create files with the full datestring in the output filenames.", default=False)
-					  
+
     (opt, arg) = parser.parse_args()
 
     if  opt.latest == False and opt.date == False:
