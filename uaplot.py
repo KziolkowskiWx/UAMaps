@@ -450,8 +450,9 @@ def uaPlot(data, level, date, save_dir, ds, hour, td_option, te_option, date_opt
                         ' Valid: {0:%Y-%m-%d} {0:%H}:00 UTC'.format(date), loc=3, frameon=True, prop=dict(fontsize=30))
     ax.add_artist(text)
     plt.tight_layout()
-    if date_option != False:
-        save_fname = str(level) + 'mb_{0:%Y%m%d%H%M}z.png'.format(date)
+    if long_filenames == True:
+        save_fname = '{0:%Y%m%d_%H}Z_'.format(date) + str(level)  + 'mb.png'.format(date)
+        thumb_fname = '{0:%Y%m%d_%H}Z_'.format(date) + str(level)  + 'mb_thumbnail.png'
     else:
         if hour == 12:
             save_fname = str(level) + 'mb_' + str(hour) + 'z.png'
@@ -476,4 +477,4 @@ def uaPlot(data, level, date, save_dir, ds, hour, td_option, te_option, date_opt
     # plt.show()
 
 if __name__ == '__main__':
-    main()
+main()
