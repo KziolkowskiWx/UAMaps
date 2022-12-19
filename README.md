@@ -54,4 +54,13 @@ This will plot dewpoint on the station plot for 850 and 925 (700 mb will always 
 
 ## Output
 
-By default, this script will output upper air maps as PNG files. Using the option `--compress_output` will enable more aggressive PNG optimization, including compression and indexing, reducing the file size by approximately 60%. This comes at the cost of an increased run time.
+By default, this script will output upper air maps as PNG files. Using the option `--compress-output` will enable more aggressive PNG optimization, including compression and indexing, reducing the file size by approximately 60%. This comes at the cost of an increased run time.
+
+The flag `--png-colours` can be used to specify the number of colours used in the output image. For example, `--png-colours 32` to restrict the output file to 32 colours. The default is 256 colours.
+
+If you want the script to also generate thumbnail images, add the `--thumbnails` flag. You can specify the maximum pixel dimension of the generated thumbnail using `--thumbnail-size` with an integer value. The default is 640 pixels.
+
+## Additional Options
+
+* Filenames, by default, will simply be formatted as `[level]_[time]Z.png`. If you would like more descriptive filenames, use the `--long-filenames` flag. This will utilize the full datestring in the output filenames.
+* The flag `--cwd` will tell the application to use the current working directory rather than a hard-coded path.
